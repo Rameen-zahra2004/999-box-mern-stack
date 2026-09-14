@@ -3,7 +3,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
-import { submitOrder } from "../AdminSlices/cartSlice";
+import { submitOrder } from "../Slices/orderSlice";
+import { fetchCart } from "../Slices/cartSlice";
 import StripePayment from "../Component/StripePayment";
 import PaypalPayment from "../Component/PaypalPayment";
 
@@ -46,25 +47,23 @@ export default function CheckoutPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // ── same selectors as your original file ──
   const { user } = useSelector((state) => state.signinuser || {});
-  const { cart } = useSelector((state) => state.cart || { cart: [] });
+  const { items: cart } = useSelector((state) => state.cart || { items: [] });
 
   const subtotal = useMemo(
-    () =>
-      (cart || []).reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () => (cart || []).reduce((sum, item) => sum + item.subtotal, 0),
     [cart],
   );
-  const shipping_fee = subtotal > 100 ? 0 : 9.99;
-  const tax = subtotal * 0.08;
+  const shipping_fee = subtotal > 5000 ? 0 : 250;
+  const tax = subtotal * 0.05;
   const total = subtotal + shipping_fee + tax;
   const amountInCents = Math.round(total * 100);
 
   const [activeMethod, setActiveMethod] = useState("stripe");
   const [paymentStatus, setPaymentStatus] = useState(null); // null | "error"
   const [statusMessage, setStatusMessage] = useState("");
+  const [placingOrder, setPlacingOrder] = useState(false);
 
-  // ── same shipping state as your original file ──
   const [shipping, setShipping] = useState({
     fullName: user?.username || "",
     address: "",
@@ -88,27 +87,47 @@ export default function CheckoutPage() {
     return true;
   };
 
-  // Called by StripePayment / PaypalPayment on success
-  const handlePaymentSuccess = (data) => {
+  // Called by StripePayment / PaypalPayment on success — payment has ALREADY
+  // been charged at this point. Backend rebuilds items/prices from the DB
+  // cart itself — client only needs to send paymentMethod + shippingAddress
+  // (see order.service.js).
+  //
+  // FIX: previously this dispatched submitOrder and navigated away
+  // immediately without checking whether order creation succeeded. Since
+  // payment has already been captured, a failure here means the customer
+  // paid with no order on record and never saw an error. Now we await the
+  // thunk, only navigate on success, and surface a clear message (with
+  // guidance to contact support) if order creation fails after payment.
+  const handlePaymentSuccess = async () => {
     if (!validateShipping()) return;
 
-    const order = {
-      userId: user?.id,
-      username: user?.username,
-      shipping,
-      payment: {
-        method: activeMethod,
-        reference:
-          data?.paymentIntentId || data?.paypalOrderId || data?.id || "N/A",
-      },
-      items: cart,
-      totalPrice: total,
-      status: "pending",
-      date: new Date().toLocaleString(),
-    };
+    setPlacingOrder(true);
+    setPaymentStatus(null);
+    setStatusMessage("");
 
-    dispatch(submitOrder(order));
-    navigate("/user");
+    try {
+      await dispatch(
+        submitOrder({
+          paymentMethod: activeMethod.toUpperCase(), // "stripe" → "STRIPE", "paypal" → "PAYPAL"
+          shippingAddress: shipping,
+        }),
+      ).unwrap();
+
+      // Backend already cleared the cart on successful order creation —
+      // sync local state so the cart page doesn't show stale items.
+      dispatch(fetchCart());
+
+      navigate("/user");
+    } catch (err) {
+      setPaymentStatus("error");
+      setStatusMessage(
+        typeof err === "string"
+          ? `Payment succeeded, but we couldn't place your order: ${err}. Please contact support with your payment details — do not pay again.`
+          : "Payment succeeded, but we couldn't place your order. Please contact support with your payment details — do not pay again.",
+      );
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   const handlePaymentError = (message) => {
@@ -145,7 +164,6 @@ export default function CheckoutPage() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* LEFT: Shipping + Payment */}
         <div className="bg-white shadow-md shadow-pink-100 border border-pink-100 rounded-lg p-6 space-y-6">
-          {/* Shipping Address — identical fields to your original */}
           <div>
             <h2 className="font-semibold text-xl mb-3 text-pink-700">
               Shipping Address
@@ -170,7 +188,6 @@ export default function CheckoutPage() {
             ))}
           </div>
 
-          {/* Payment Method Selector */}
           <div>
             <h2 className="font-semibold text-xl mb-3 text-pink-700">
               Payment Method
@@ -210,7 +227,6 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            {/* Error Banner */}
             {paymentStatus === "error" && (
               <div className="mb-4 flex items-start gap-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl px-4 py-3 text-sm">
                 <svg
@@ -228,7 +244,12 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Validate before allowing payment */}
+            {placingOrder && (
+              <div className="mb-4 bg-pink-50 border border-pink-200 text-pink-700 rounded-xl px-4 py-3 text-sm animate-pulse">
+                Finalizing your order — please don't close this page...
+              </div>
+            )}
+
             {!user ? (
               <div className="bg-pink-50 border border-pink-200 text-pink-700 rounded-xl px-4 py-3 text-sm">
                 ⚠ Please log in to complete your purchase.
@@ -241,7 +262,7 @@ export default function CheckoutPage() {
               <Elements stripe={stripePromise}>
                 <StripePayment
                   amount={amountInCents}
-                  orderId={user?.id}
+                  orderId={user?._id}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
                 />
@@ -249,7 +270,7 @@ export default function CheckoutPage() {
             ) : (
               <PaypalPayment
                 amount={amountInCents}
-                orderId={user?.id}
+                orderId={user?._id}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
               />
@@ -257,7 +278,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* RIGHT: Order Summary — identical structure to your original */}
+        {/* RIGHT: Order Summary */}
         <div className="bg-white shadow-md shadow-pink-100 border border-pink-100 rounded-lg p-6 flex flex-col">
           <h2 className="font-semibold text-xl mb-4 text-pink-700">
             Order Summary
@@ -269,31 +290,32 @@ export default function CheckoutPage() {
             ) : (
               cart.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.product._id}
                   className="flex justify-between items-center border-b border-pink-100 pb-2"
                 >
                   <div className="flex items-center gap-2">
                     <img
-                      src={item.image}
-                      alt={item.title}
+                      src={item.product.image}
+                      alt={item.product.name}
                       className="w-12 h-12 rounded object-cover ring-1 ring-pink-100"
                     />
                     <div>
-                      <p className="font-medium text-gray-800">{item.title}</p>
+                      <p className="font-medium text-gray-800">
+                        {item.product.name}
+                      </p>
                       <p className="text-sm text-gray-500">
                         Qty: {item.quantity}
                       </p>
                     </div>
                   </div>
                   <p className="font-medium text-pink-600">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ${item.subtotal.toFixed(2)}
                   </p>
                 </div>
               ))
             )}
           </div>
 
-          {/* Price Breakdown */}
           <div className="border-t border-pink-100 mt-4 pt-4 space-y-2 text-sm text-gray-600">
             <div className="flex justify-between">
               <span>Subtotal</span>
@@ -306,7 +328,7 @@ export default function CheckoutPage() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Tax (8%)</span>
+              <span>Tax (5%)</span>
               <span>${tax.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-semibold text-base text-gray-900 pt-2 border-t border-pink-100">
@@ -317,7 +339,7 @@ export default function CheckoutPage() {
 
           {shipping_fee > 0 && (
             <div className="mt-3 bg-pink-50 border border-pink-200 rounded-lg px-3 py-2 text-xs text-pink-700">
-              Add <strong>${(100 - subtotal).toFixed(2)}</strong> more for free
+              Add <strong>${(5000 - subtotal).toFixed(2)}</strong> more for free
               shipping!
             </div>
           )}

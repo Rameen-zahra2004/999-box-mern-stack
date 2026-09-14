@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { addTocart } from "../AdminSlices/cartSlice";
+import {
+  addCartItem,
+  updateCartItem,
+  selectCartItems,
+} from "../Slices/cartSlice";
 import { addToWishlist, removeFromWishlist } from "../Slices/wishListSlice";
 import {
   fetchProductById,
@@ -38,12 +42,18 @@ export default function ProductPage() {
   const loading = status.fetchById === "loading";
   const fetchByIdError = error.fetchById;
 
-  const { cart } = useSelector((state) => state.cart || {});
+  const cartItems = useSelector(selectCartItems); // [{ product: {...}, quantity, price, subtotal }]
   const { wishlist: wishlistItems = [] } = useSelector(
     (state) => state.wishlist || {},
   );
 
-  const loggedInUserId = useSelector((state) => state.auth?.user?._id ?? null);
+  // NOTE: was `state.auth?.user?._id` — there is no "auth" key in store.js,
+  // the user slice is registered as "signinuser". This previously made
+  // loggedInUserId always null regardless of login state.
+  const loggedInUserId = useSelector(
+    (state) => state.signinuser?.user?._id ?? null,
+  );
+
   useEffect(() => {
     dispatch(fetchProductById(id));
     setActiveImage(0);
@@ -56,8 +66,8 @@ export default function ProductPage() {
   };
 
   const existingCartItem = useMemo(
-    () => cart?.find((i) => i._id === product?._id),
-    [cart, product],
+    () => cartItems.find((i) => i.product?._id === product?._id),
+    [cartItems, product],
   );
 
   const isInWishlist = useMemo(
@@ -65,15 +75,25 @@ export default function ProductPage() {
     [wishlistItems, product],
   );
 
+  // NOTE: no size handling — this backend has no size-variant support on Cart items.
+  //
+  // FIX: addCartItem's backend service treats `quantity` as ADDITIVE
+  // (existingItem.quantity += quantity), not absolute. Previously this
+  // always called addCartItem with (existing.quantity + quantity), which
+  // the backend then added AGAIN on top of the existing amount, silently
+  // doubling up. When the item already exists, use updateCartItem instead,
+  // which sets an absolute quantity — same pattern as UserCartPage.jsx.
   const handleAddToCart = () => {
-    dispatch(
-      addTocart({
-        ...product,
-        quantity: existingCartItem
-          ? existingCartItem.quantity + quantity
-          : quantity,
-      }),
-    );
+    if (existingCartItem) {
+      dispatch(
+        updateCartItem({
+          productId: product._id,
+          quantity: existingCartItem.quantity + quantity,
+        }),
+      );
+    } else {
+      dispatch(addCartItem({ productId: product._id, quantity }));
+    }
     showToast("✔ Added to cart");
     navigate("/user/cart");
   };

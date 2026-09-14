@@ -1,201 +1,227 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import publicApi from "../../publicApi";
+import adminCartApi from "../api/adminCartApi";
+// baseURL already includes /api/admin/carts — all calls below are relative to that
 
-// ─── localStorage helpers ─────────────────────────────────
-const loadCart = () => JSON.parse(localStorage.getItem("cart") || "[]");
-const saveCart = (cart) => localStorage.setItem("cart", JSON.stringify(cart));
-const loadOrders = () => JSON.parse(localStorage.getItem("orders") || "[]");
-const saveOrders = (orders) =>
-  localStorage.setItem("orders", JSON.stringify(orders));
+// ---------- THUNKS ----------
+// FIX: every thunk previously used `err.message` for rejectWithValue, which
+// on an Axios error is a generic string like "Request failed with status
+// code 404" — it never surfaces your backend's actual error message. Now
+// matches the pattern used in adminOrderSlice.js / cartSlice.js / orderSlice.js.
 
-// ─── Products (dummyjson) ─────────────────────────────────
-export const fetchProduct = createAsyncThunk(
-  "cart/fetchProduct",
-  async (_, { rejectWithValue }) => {
+export const fetchAllCarts = createAsyncThunk(
+  "adminCarts/fetchAllCarts",
+  async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
     try {
-      const res = await publicApi.get("/products?limit=20");
-      return res.data.products; // dummyjson wraps in { products: [...] }
+      const { data } = await adminCartApi.get("/", { params: { page, limit } });
+      return data.data; // { carts, total, page, totalPages }
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch products",
-      );
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   },
 );
 
-// ─── Cart thunks (localStorage) ──────────────────────────
-export const fetchCart = createAsyncThunk("cart/fetchCart", async () =>
-  loadCart(),
-);
-
-export const addTocart = createAsyncThunk(
-  "cart/addTocart",
-  async (item, { getState }) => {
-    const { cart } = getState().cart;
-    const existing = cart.find((i) => i.id === item.id && i.size === item.size);
-    let updated;
-    if (existing) {
-      updated = cart.map((i) =>
-        i.id === item.id && i.size === item.size
-          ? { ...i, quantity: i.quantity + (item.quantity ?? 1) }
-          : i,
-      );
-    } else {
-      updated = [...cart, { ...item, quantity: item.quantity ?? 1 }];
+export const fetchCartByUserId = createAsyncThunk(
+  "adminCarts/fetchCartByUserId",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const { data } = await adminCartApi.get(`/${userId}`);
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
-    saveCart(updated);
-    return updated;
   },
 );
 
-export const updateCartQuantity = createAsyncThunk(
-  "cart/updateCartQuantity",
-  async ({ id, size, quantity }, { getState }) => {
-    const { cart } = getState().cart;
-    const updated = cart.map((i) =>
-      i.id === id && i.size === size
-        ? { ...i, quantity: Math.max(1, quantity) }
-        : i,
-    );
-    saveCart(updated);
-    return updated;
+export const adminAddToCart = createAsyncThunk(
+  "adminCarts/adminAddToCart",
+  async ({ userId, productId, quantity }, { rejectWithValue }) => {
+    try {
+      const { data } = await adminCartApi.post(`/${userId}`, {
+        productId,
+        quantity,
+      });
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
   },
 );
 
-export const deleteCartItem = createAsyncThunk(
-  "cart/deleteCartItem",
-  async ({ id, size }, { getState }) => {
-    const { cart } = getState().cart;
-    const updated = cart.filter((i) => !(i.id === id && i.size === size));
-    saveCart(updated);
-    return updated;
+export const adminUpdateCartItem = createAsyncThunk(
+  "adminCarts/adminUpdateCartItem",
+  async ({ userId, productId, quantity }, { rejectWithValue }) => {
+    try {
+      const { data } = await adminCartApi.put(`/${userId}/${productId}`, {
+        quantity,
+      });
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
   },
 );
 
-// ─── Order thunks (localStorage) ─────────────────────────
-export const submitOrder = createAsyncThunk(
-  "cart/submitOrder",
-  async (orderInfo, { getState }) => {
-    const { cart, orders } = getState().cart;
-    const newOrder = {
-      ...orderInfo,
-      id: Date.now(),
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      items: cart,
-    };
-    const updated = [...orders, newOrder];
-    saveOrders(updated);
-    saveCart([]);
-    return newOrder;
+export const adminRemoveCartItem = createAsyncThunk(
+  "adminCarts/adminRemoveCartItem",
+  async ({ userId, productId }, { rejectWithValue }) => {
+    try {
+      const { data } = await adminCartApi.delete(`/${userId}/${productId}`);
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
   },
 );
 
-export const fetchAllOrders = createAsyncThunk(
-  "cart/fetchAllOrders",
-  async () => loadOrders(),
-);
-
-export const updateOrderStatus = createAsyncThunk(
-  "cart/updateOrderStatus",
-  async ({ id, status }, { getState }) => {
-    const { orders } = getState().cart;
-    const updated = orders.map((o) => (o.id === id ? { ...o, status } : o));
-    saveOrders(updated);
-    return updated;
+export const adminClearCart = createAsyncThunk(
+  "adminCarts/adminClearCart",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const { data } = await adminCartApi.delete(`/${userId}`);
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
   },
 );
 
-export const deleteOrder = createAsyncThunk(
-  "cart/deleteOrder",
-  async (id, { getState }) => {
-    const { orders } = getState().cart;
-    const updated = orders.filter((o) => o.id !== id);
-    saveOrders(updated);
-    return updated;
-  },
-);
+// ---------- INITIAL STATE ----------
 
-// ─── Slice ────────────────────────────────────────────────
-const cartSlice = createSlice({
-  name: "cart",
-  initialState: {
-    products: [],
-    cart: loadCart(),
-    orders: loadOrders(),
-    loading: false,
-    error: null,
+const initialState = {
+  carts: [],
+  pagination: { page: 1, totalPages: 1, total: 0 },
+  selectedCart: null,
+  loading: {
+    list: false,
+    single: false,
+    add: false,
+    update: false,
+    removeItem: false,
+    clear: false,
   },
+  error: {
+    list: null,
+    single: null,
+    add: null,
+    update: null,
+    removeItem: null,
+    clear: null,
+  },
+};
 
+// ---------- SLICE ----------
+
+const adminCartSlice = createSlice({
+  name: "adminCarts",
+  initialState,
   reducers: {
-    clearCart: (state) => {
-      state.cart = [];
-      localStorage.removeItem("cart");
-    },
-    clearError: (state) => {
-      state.error = null;
+    clearSelectedCart: (state) => {
+      state.selectedCart = null;
+      state.error.single = null;
     },
   },
-
   extraReducers: (builder) => {
-    const pending = (state) => {
-      state.loading = true;
-      state.error = null;
-    };
-    const rejected = (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    };
-
     builder
-      // Products
-      .addCase(fetchProduct.pending, pending)
-      .addCase(fetchProduct.fulfilled, (state, action) => {
-        state.loading = false;
-        state.products = action.payload;
+      // LIST
+      .addCase(fetchAllCarts.pending, (state) => {
+        state.loading.list = true;
+        state.error.list = null;
       })
-      .addCase(fetchProduct.rejected, rejected)
-
-      // Cart
-      .addCase(fetchCart.fulfilled, (state, action) => {
-        state.cart = action.payload;
+      .addCase(fetchAllCarts.fulfilled, (state, action) => {
+        state.loading.list = false;
+        state.carts = action.payload.carts;
+        state.pagination = {
+          page: action.payload.page,
+          totalPages: action.payload.totalPages,
+          total: action.payload.total,
+        };
       })
-      .addCase(addTocart.fulfilled, (state, action) => {
-        state.cart = action.payload;
-      })
-      .addCase(updateCartQuantity.fulfilled, (state, action) => {
-        state.cart = action.payload;
-      })
-      .addCase(deleteCartItem.fulfilled, (state, action) => {
-        state.cart = action.payload;
+      .addCase(fetchAllCarts.rejected, (state, action) => {
+        state.loading.list = false;
+        state.error.list = action.payload;
       })
 
-      // Orders
-      .addCase(submitOrder.pending, pending)
-      .addCase(submitOrder.fulfilled, (state, action) => {
-        state.loading = false;
-        state.orders.push(action.payload);
-        state.cart = [];
+      // SINGLE
+      .addCase(fetchCartByUserId.pending, (state) => {
+        state.loading.single = true;
+        state.error.single = null;
       })
-      .addCase(submitOrder.rejected, rejected)
+      .addCase(fetchCartByUserId.fulfilled, (state, action) => {
+        state.loading.single = false;
+        state.selectedCart = action.payload;
+      })
+      .addCase(fetchCartByUserId.rejected, (state, action) => {
+        state.loading.single = false;
+        state.error.single = action.payload;
+      })
 
-      .addCase(fetchAllOrders.fulfilled, (state, action) => {
-        state.orders = action.payload;
+      // ADD
+      .addCase(adminAddToCart.pending, (state) => {
+        state.loading.add = true;
+        state.error.add = null;
       })
-      .addCase(updateOrderStatus.fulfilled, (state, action) => {
-        state.orders = action.payload;
+      .addCase(adminAddToCart.fulfilled, (state, action) => {
+        state.loading.add = false;
+        state.selectedCart = action.payload;
       })
-      .addCase(deleteOrder.fulfilled, (state, action) => {
-        state.orders = action.payload;
+      .addCase(adminAddToCart.rejected, (state, action) => {
+        state.loading.add = false;
+        state.error.add = action.payload;
+      })
+
+      // UPDATE
+      .addCase(adminUpdateCartItem.pending, (state) => {
+        state.loading.update = true;
+        state.error.update = null;
+      })
+      .addCase(adminUpdateCartItem.fulfilled, (state, action) => {
+        state.loading.update = false;
+        state.selectedCart = action.payload;
+      })
+      .addCase(adminUpdateCartItem.rejected, (state, action) => {
+        state.loading.update = false;
+        state.error.update = action.payload;
+      })
+
+      // REMOVE ITEM
+      .addCase(adminRemoveCartItem.pending, (state) => {
+        state.loading.removeItem = true;
+        state.error.removeItem = null;
+      })
+      .addCase(adminRemoveCartItem.fulfilled, (state, action) => {
+        state.loading.removeItem = false;
+        state.selectedCart = action.payload;
+      })
+      .addCase(adminRemoveCartItem.rejected, (state, action) => {
+        state.loading.removeItem = false;
+        state.error.removeItem = action.payload;
+      })
+
+      // CLEAR
+      .addCase(adminClearCart.pending, (state) => {
+        state.loading.clear = true;
+        state.error.clear = null;
+      })
+      .addCase(adminClearCart.fulfilled, (state, action) => {
+        state.loading.clear = false;
+        state.selectedCart = action.payload;
+      })
+      .addCase(adminClearCart.rejected, (state, action) => {
+        state.loading.clear = false;
+        state.error.clear = action.payload;
       });
   },
 });
 
-export const { clearCart, clearError } = cartSlice.actions;
+export const { clearSelectedCart } = adminCartSlice.actions;
 
-// ─── Selectors ────────────────────────────────────────────
-export const selectAllOrders = (state) => state.cart.orders;
-export const selectCart = (state) => state.cart.cart;
-export const selectProducts = (state) => state.cart.products;
+// ---------- SELECTORS ----------
 
-export default cartSlice.reducer;
+export const selectAdminCarts = (state) => state.adminCarts.carts;
+export const selectAdminCartsPagination = (state) =>
+  state.adminCarts.pagination;
+export const selectSelectedCart = (state) => state.adminCarts.selectedCart;
+export const selectAdminCartsLoading = (state) => state.adminCarts.loading;
+export const selectAdminCartsError = (state) => state.adminCarts.error;
+
+export default adminCartSlice.reducer;

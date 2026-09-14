@@ -63,7 +63,19 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error) {
-    console.error("Component Error:", error);
+    // FIX (round 2): the previous fix's own `String(error)` fallback could
+    // itself throw "Cannot convert object to primitive value" if `error`
+    // is a non-Error object with no prototype (e.g. thrown as a plain
+    // object rather than `new Error(...)`), since such an object has
+    // neither `.message` nor a working `.toString()`. Wrapped in try/catch
+    // so the error-handling code can never itself become the crash.
+    let safeMessage;
+    try {
+      safeMessage = error?.message || String(error);
+    } catch {
+      safeMessage = "An error occurred that could not be converted to text.";
+    }
+    console.error("Component Error:", safeMessage);
   }
 
   render() {
@@ -85,6 +97,25 @@ const ComponentWrapper = ({ children }) => (
     <Suspense fallback={<SkeletonLoader />}>{children}</Suspense>
   </ErrorBoundary>
 );
+
+// FIX: the actual root cause of "Cannot convert object to primitive value" —
+// error state coming from any of the four slices below could be a raw
+// object (e.g. if a thunk's rejectWithValue passes err.response.data
+// directly instead of extracting a message string), and rendering that
+// object straight into JSX/console eventually forces a string conversion
+// that throws. This normalizes ANY shape into a safe, displayable string
+// before it ever reaches render — regardless of which slice misbehaves.
+const toSafeErrorMessage = (error) => {
+  if (!error) return null;
+  if (typeof error === "string") return error;
+  if (error.message && typeof error.message === "string") return error.message;
+  if (Array.isArray(error.errors)) return error.errors.join(", ");
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "An unexpected error occurred.";
+  }
+};
 
 /* ---------- MAIN ---------- */
 export default function AdminSettings() {
@@ -126,7 +157,8 @@ export default function AdminSettings() {
   const loading =
     profileLoading || rolesLoading || systemLoading || activityLoading;
 
-  const error = profileError || rolesError || systemError || activityError;
+  const rawError = profileError || rolesError || systemError || activityError;
+  const error = toSafeErrorMessage(rawError);
 
   // ── Fetch on mount (once) ─────────────────────────────────
   useEffect(() => {

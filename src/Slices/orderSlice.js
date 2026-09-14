@@ -1,53 +1,67 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../api";
 
 // -------------------- THUNKS --------------------
 
-// Fetch all orders for a user
-export const fetchUserOrders = createAsyncThunk(
-  "order/fetchUserOrders",
-  async (userId, { rejectWithValue }) => {
+export const submitOrder = createAsyncThunk(
+  "order/submitOrder",
+  async ({ paymentMethod, shippingAddress }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(
-        `http://localhost:3000/orders?userId=${userId}`
-      );
-      return data;
+      const { data } = await api.post("/orders", {
+        paymentMethod,
+        shippingAddress,
+      });
+      return data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || err.message);
     }
-  }
+  },
 );
 
-// Fetch single order detail
+export const fetchUserOrders = createAsyncThunk(
+  "order/fetchUserOrders",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await api.get("/orders");
+      return data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
+  },
+);
+
 export const fetchOrdersDetail = createAsyncThunk(
   "order/fetchOrdersDetail",
   async (orderId, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(
-        `http://localhost:3000/orders/${orderId}`
-      );
-      return data;
+      const { data } = await api.get(`/orders/${orderId}`);
+      return data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || err.message);
     }
-  }
+  },
 );
 
-// Update order status
-export const updateOrderStatus = createAsyncThunk(
-  "order/updateOrderStatus",
-  async ({ orderId, status }, { rejectWithValue }) => {
+export const cancelOrder = createAsyncThunk(
+  "order/cancelOrder",
+  async (orderId, { rejectWithValue }) => {
     try {
-      const { data } = await axios.put(
-        `http://localhost:3000/orders/${orderId}`,
-        { status }
-      );
-      return data;
+      const { data } = await api.patch(`/orders/${orderId}/cancel`);
+      return data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || err.message);
     }
-  }
+  },
 );
+
+// NOTE: removed `updateOrderStatus` thunk that previously called
+// `PUT /orders/${orderId}`. That route does not exist in order.routes.js —
+// only `PATCH /orders/admin/:id/status` does, which belongs to
+// adminOrderSlice.js and is already used correctly there. This thunk was
+// dead code that would have 404'd if ever dispatched from the user-facing
+// flow. If you ever need users to trigger a status change themselves
+// (unlikely — that's an admin action), add a real backend route first,
+// then a matching thunk here.
 
 // -------------------- INITIAL STATE --------------------
 
@@ -55,8 +69,9 @@ const initialState = {
   orders: [],
   ordersDetail: null,
   loading: false,
+  submitting: false,
+  cancelling: false,
   error: null,
-  updatingOrderId: null,
 };
 
 // -------------------- SLICE --------------------
@@ -68,9 +83,27 @@ const orderSlice = createSlice({
     clearOrdersDetail: (state) => {
       state.ordersDetail = null;
     },
+    resetOrderError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
+      // SUBMIT
+      .addCase(submitOrder.pending, (state) => {
+        state.submitting = true;
+        state.error = null;
+      })
+      .addCase(submitOrder.fulfilled, (state, action) => {
+        state.submitting = false;
+        state.orders.unshift(action.payload);
+      })
+      .addCase(submitOrder.rejected, (state, action) => {
+        state.submitting = false;
+        state.error = action.payload;
+      })
+
+      // FETCH ALL
       .addCase(fetchUserOrders.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -84,6 +117,7 @@ const orderSlice = createSlice({
         state.error = action.payload;
       })
 
+      // FETCH SINGLE
       .addCase(fetchOrdersDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -97,25 +131,23 @@ const orderSlice = createSlice({
         state.error = action.payload;
       })
 
-      .addCase(updateOrderStatus.fulfilled, (state, action) => {
+      // CANCEL
+      .addCase(cancelOrder.pending, (state) => {
+        state.cancelling = true;
+        state.error = null;
+      })
+      .addCase(cancelOrder.fulfilled, (state, action) => {
+        state.cancelling = false;
         const updatedOrder = action.payload;
-
-        const index = state.orders.findIndex(
-          (o) => o._id === updatedOrder._id
-        );
-
-        if (index !== -1) {
-          state.orders[index] = updatedOrder;
-        }
-
-        if (state.ordersDetail?._id === updatedOrder._id) {
-          state.ordersDetail = updatedOrder;
-        }
+        const index = state.orders.findIndex((o) => o._id === updatedOrder._id);
+        if (index !== -1) state.orders[index] = updatedOrder;
+      })
+      .addCase(cancelOrder.rejected, (state, action) => {
+        state.cancelling = false;
+        state.error = action.payload;
       });
   },
 });
 
-// -------------------- EXPORTS --------------------
-
-export const { clearOrdersDetail } = orderSlice.actions;
+export const { clearOrdersDetail, resetOrderError } = orderSlice.actions;
 export default orderSlice.reducer;

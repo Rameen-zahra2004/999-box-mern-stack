@@ -1,58 +1,66 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchAllOrders, updateOrderStatus } from "../AdminSlices/cartSlice";
+import {
+  fetchAllOrdersAdmin,
+  updateOrderStatusAdmin,
+} from "../AdminSlices/adminOrderSlice";
+
+const STATUS_OPTIONS = [
+  "PENDING",
+  "PAID",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+  "REFUNDED",
+];
 
 export default function AdminOrdersPage() {
   const dispatch = useDispatch();
-  const { orders = [], loading, error } = useSelector((state) => state.cart);
+  const { orders, pagination, loading, updating, error } = useSelector(
+    (state) => state.adminOrders,
+  );
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    dispatch(fetchAllOrders());
-  }, [dispatch]);
+    dispatch(
+      fetchAllOrdersAdmin({
+        page,
+        limit: 10,
+        status: filter === "all" ? undefined : filter,
+      }),
+    );
+  }, [dispatch, page, filter]);
 
   const filteredOrders = useMemo(() => {
-    return orders
-      .filter((o) => filter === "all" || o.status === filter)
-      .filter(
-        (o) =>
-          o.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          o.id.toString().includes(searchQuery),
-      );
-  }, [orders, filter, searchQuery]);
+    return orders.filter(
+      (o) =>
+        o.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        o.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        o._id.includes(searchQuery),
+    );
+  }, [orders, searchQuery]);
 
   const totalRevenue = filteredOrders.reduce(
-    (sum, order) => sum + order.totalPrice,
+    (sum, order) => sum + order.totalAmount,
     0,
   );
 
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-
-  const paginatedOrders = filteredOrders.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
-
   const handleStatusChange = (order, newStatus) => {
-    if (
-      window.confirm(
-        `Are you sure you want to mark this order as ${newStatus}?`,
-      )
-    ) {
-      dispatch(updateOrderStatus({ id: order.id, status: newStatus }));
+    if (window.confirm(`Mark this order as ${newStatus}?`)) {
+      dispatch(
+        updateOrderStatusAdmin({ orderId: order._id, status: newStatus }),
+      );
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto p-6 min-h-screen bg-linear-to-br from-rose-50 via-pink-50 to-fuchsia-50">
-      {/* Header */}
       <h1 className="text-3xl font-bold mb-6 text-rose-900">📦 All Orders</h1>
 
-      {/* Filter + Search + Revenue */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div className="flex gap-4 items-center">
           <span className="font-semibold text-rose-800">
@@ -65,24 +73,29 @@ export default function AdminOrdersPage() {
           <select
             className="border border-rose-200 rounded-md p-2 bg-white text-rose-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => {
+              setFilter(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="all">All</option>
-            <option value="pending">Pending</option>
-            <option value="delivered">Delivered</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
         </div>
 
         <input
           type="text"
-          placeholder="Search by username or order ID..."
+          placeholder="Search by username, email, or order ID..."
           className="border border-rose-200 rounded-md p-2 w-full sm:w-64 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
-      {/* Loading / Error */}
       {loading && (
         <p className="text-center text-rose-600 py-4 animate-pulse">
           Loading orders...
@@ -90,7 +103,6 @@ export default function AdminOrdersPage() {
       )}
       {error && <p className="text-center text-red-500 py-4">{error}</p>}
 
-      {/* Orders Table */}
       <div className="overflow-x-auto bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-rose-100">
         <table className="w-full border-collapse">
           <thead className="bg-rose-50 text-rose-900">
@@ -111,37 +123,43 @@ export default function AdminOrdersPage() {
           </thead>
 
           <tbody>
-            {paginatedOrders.map((order, index) => (
+            {filteredOrders.map((order, index) => (
               <tr
-                key={order.id}
+                key={order._id}
                 className="hover:bg-rose-50 transition border-b border-rose-100"
               >
                 <td className="p-3 text-rose-700">
-                  {(currentPage - 1) * itemsPerPage + index + 1}
+                  {(pagination.page - 1) * 10 + index + 1}
                 </td>
 
-                <td className="p-3 font-medium text-rose-900">{order.id}</td>
+                <td className="p-3 font-medium text-rose-900">
+                  {order._id.slice(-8)}
+                </td>
 
-                <td className="p-3 text-gray-700">{order.username}</td>
+                <td className="p-3 text-gray-700">
+                  {order.user?.username || order.user?.email || "Unknown"}
+                </td>
 
                 <td className="p-3 text-sm text-gray-600">
                   {order.items.map((item) => (
-                    <div key={item.id}>
-                      {item.title} x {item.quantity} (${item.price.toFixed(2)})
+                    <div key={item.product}>
+                      {item.name} x {item.quantity} (${item.price.toFixed(2)})
                     </div>
                   ))}
                 </td>
 
                 <td className="p-3 font-semibold text-rose-700">
-                  ${order.totalPrice.toFixed(2)}
+                  ${order.totalAmount.toFixed(2)}
                 </td>
 
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded-full text-sm font-semibold ${
-                      order.status === "pending"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-emerald-100 text-emerald-700"
+                      order.status === "DELIVERED"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : order.status === "CANCELLED"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-amber-100 text-amber-700"
                     }`}
                   >
                     {order.status}
@@ -149,18 +167,22 @@ export default function AdminOrdersPage() {
                 </td>
 
                 <td className="p-3 text-gray-600">
-                  {new Date(order.date).toLocaleDateString()}
+                  {new Date(order.createdAt).toLocaleDateString()}
                 </td>
 
                 <td className="p-3">
-                  {order.status === "pending" && (
-                    <button
-                      onClick={() => handleStatusChange(order, "delivered")}
-                      className="bg-emerald-500 text-white px-3 py-1 rounded-md hover:bg-emerald-600 transition shadow-sm"
-                    >
-                      Mark Delivered
-                    </button>
-                  )}
+                  <select
+                    className="border border-rose-200 rounded-md p-1 text-sm bg-white"
+                    value={order.status}
+                    disabled={updating}
+                    onChange={(e) => handleStatusChange(order, e.target.value)}
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </td>
               </tr>
             ))}
@@ -168,23 +190,20 @@ export default function AdminOrdersPage() {
         </table>
       </div>
 
-      {/* Pagination */}
       <div className="flex justify-end gap-2 mt-4 text-rose-800">
         <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
           className="px-3 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 disabled:opacity-50"
         >
           Prev
         </button>
-
         <span className="px-3 py-1">
-          Page {currentPage} of {totalPages}
+          Page {pagination.page} of {pagination.totalPages}
         </span>
-
         <button
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
+          onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+          disabled={page >= pagination.totalPages}
           className="px-3 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 disabled:opacity-50"
         >
           Next

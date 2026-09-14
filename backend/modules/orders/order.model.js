@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 import { ORDER_STATUS } from "./order.status.js";
 
 const orderItemSchema = new mongoose.Schema(
@@ -52,7 +51,7 @@ const orderSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["COD", "CARD", "JAZZCASH"],
+      enum: ["COD", "CARD", "STRIPE", "PAYPAL", "JAZZCASH"],
       default: "COD",
     },
 

@@ -1,54 +1,44 @@
 import mongoose from "mongoose";
 
-const cartItemSchema =
-  new mongoose.Schema(
-    {
-      product: {
-        type:
-          mongoose.Schema.Types.ObjectId,
-
-        ref: "Product",
-
-        required: true,
-      },
-
-      quantity: {
-        type: Number,
-        required: true,
-        min: 1,
-        default: 1,
-      },
-
-      price: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
-
-      subtotal: {
-        type: Number,
-        required: true,
-        min: 0,
-      },
+const cartItemSchema = new mongoose.Schema(
+  {
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
     },
-    {
-      _id: false,
-    }
-  );
+
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+      default: 1,
+    },
+
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    subtotal: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+  {
+    _id: false,
+  },
+);
 
 const cartSchema = new mongoose.Schema(
   {
     user: {
-      type:
-        mongoose.Schema.Types.ObjectId,
-
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-
       required: true,
-
-      unique: true,
-
-      index: true,
+      unique: true, // unique already creates the index — no separate index needed
     },
 
     items: {
@@ -101,17 +91,9 @@ const cartSchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
-
-cartSchema.index({
-  user: 1,
-});
-
-const Cart = mongoose.model(
-  "Cart",
-  cartSchema
-);
+const Cart = mongoose.model("Cart", cartSchema);
 
 export default Cart;

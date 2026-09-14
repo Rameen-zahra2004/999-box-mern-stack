@@ -19,17 +19,13 @@ import {
 import SearchBar from "../Admin component/AdminSearchBar";
 
 // Single dashboard card
-function DashboardCard({ card, onClick, loading, isDisabled }) {
+function DashboardCard({ card, onClick, loading }) {
   return (
     <div
-      onClick={isDisabled ? undefined : onClick}
-      className={`transition-transform transform hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl 
+      onClick={onClick}
+      className="transition-transform transform hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl 
                   bg-white/90 backdrop-blur-md rounded-2xl p-5 shadow-lg border border-rose-100 flex flex-col justify-between
-                  ${
-                    isDisabled
-                      ? "cursor-not-allowed opacity-50"
-                      : "cursor-pointer"
-                  }`}
+                  cursor-pointer"
     >
       <div className="flex justify-between items-center mb-3">
         <div>
@@ -96,10 +92,6 @@ export default function DashboardHome({ sidebarOpen }) {
   const { summary, sales, revenue, loading, error } = useSelector(
     (state) => state.adminDashboard,
   );
-  const { user } = useSelector((state) => state.signinuser);
-
-  const storedUser = localStorage.getItem("user");
-  const currentUser = user || (storedUser ? JSON.parse(storedUser) : null);
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -109,11 +101,15 @@ export default function DashboardHome({ sidebarOpen }) {
     dispatch(fetchRevenueAnalytics());
   }, [dispatch]);
 
-  const goToPage = (page, adminOnly = false) => {
-    if (adminOnly && currentUser?.role !== "admin") {
-      alert("You are not authorized to view this page!");
-      return;
-    }
+  // FIX: previously checked state.signinuser (the regular USER session, not
+  // the admin one) against a lowercase "admin" role string, and used that to
+  // disable most of the dashboard cards. Both parts were wrong — this page
+  // only renders inside ProtectedAdminRoute, so anyone here is already a
+  // verified admin (server-side via protectAdmin, client-side via the
+  // route guard). The extra check was redundant and effectively disabled
+  // Revenue/Carts/Settings for every real admin. Every card now just
+  // navigates directly.
+  const goToPage = (page) => {
     navigate(page);
   };
 
@@ -146,8 +142,7 @@ export default function DashboardHome({ sidebarOpen }) {
         value: sales?.daily,
         icon: <BiShoppingBag className="text-pink-600 w-6 h-6" />,
         bg: "bg-pink-100",
-        page: "/admin/carts",
-        adminOnly: true,
+        page: "/admin/orders",
         loading: loading?.sales,
       },
       {
@@ -156,7 +151,6 @@ export default function DashboardHome({ sidebarOpen }) {
         icon: <BiBarChart className="text-fuchsia-600 w-6 h-6" />,
         bg: "bg-fuchsia-100",
         page: "/admin/revenue",
-        adminOnly: true,
         trend: revenueTrend,
         loading: loading?.revenue,
       },
@@ -173,14 +167,12 @@ export default function DashboardHome({ sidebarOpen }) {
         icon: <BiCart className="text-pink-700 w-6 h-6" />,
         bg: "bg-pink-200",
         page: "/admin/carts",
-        adminOnly: true,
       },
       {
         title: "Settings",
         icon: <BiCog className="text-gray-700 w-6 h-6" />,
         bg: "bg-rose-50",
         page: "/admin/settings",
-        adminOnly: true,
       },
     ],
     [summary, sales, revenue, revenueTrend, loading],
@@ -222,19 +214,14 @@ export default function DashboardHome({ sidebarOpen }) {
       {/* Cards Grid */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {filteredCards.length > 0 ? (
-          filteredCards.map((card, idx) => {
-            const isDisabled = card.adminOnly && currentUser?.role !== "admin";
-
-            return (
-              <DashboardCard
-                key={idx}
-                card={card}
-                onClick={() => goToPage(card.page, card.adminOnly)}
-                loading={card.loading}
-                isDisabled={isDisabled}
-              />
-            );
-          })
+          filteredCards.map((card, idx) => (
+            <DashboardCard
+              key={idx}
+              card={card}
+              onClick={() => goToPage(card.page)}
+              loading={card.loading}
+            />
+          ))
         ) : (
           <p className="text-center text-rose-500 col-span-full">
             No metrics found for "{searchQuery}"

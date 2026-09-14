@@ -67,10 +67,19 @@ export const hashToken = (rawToken) =>
 
 const isProduction = process.env.NODE_ENV === "production";
 
+// FIX: was `sameSite: isProduction ? "strict" : "lax"`. Frontend (Vercel) and
+// backend (Render) will be on two completely different domains in production
+// — "strict" blocks cookies from ever being sent cross-site at all, and
+// "lax" only allows them on top-level navigations, not on the fetch/axios
+// API calls this app actually makes. Either setting would make login appear
+// to succeed but the cookie would never actually reach subsequent requests,
+// so the user gets silently logged out immediately. "none" is required for
+// cross-site cookies to work, and MUST be paired with secure: true (already
+// the case here) — browsers reject sameSite: "none" cookies over plain HTTP.
 const baseAccessCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "strict" : "lax",
+  sameSite: isProduction ? "none" : "lax",
   maxAge: 15 * 60 * 1000, // 15 minutes
   path: "/",
 };
@@ -80,7 +89,7 @@ const baseAccessCookieOptions = {
 const baseRefreshCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "strict" : "lax",
+  sameSite: isProduction ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 

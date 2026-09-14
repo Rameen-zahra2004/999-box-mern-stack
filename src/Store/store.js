@@ -20,9 +20,10 @@ import themeReducer from "../AdminSlices/themeSlice";
 import adminLoginReducer from "../AdminSlices/adminLoginSlice";
 import adminDashboardReducer from "../AdminSlices/dashboardSlice";
 import adminCartsReducer from "../AdminSlices/adminCartSlice";
-import orderDetailReducer from "../Slices/orderSlice";
+import orderReducer from "../Slices/orderSlice";
 import userSettingsReducer from "../Slices/userSettingSlice";
 import wishListReducer from "../Slices/wishListSlice";
+import adminOrderReducer from "../AdminSlices/adminOrderSlice";
 
 export const store = configureStore({
   reducer: {
@@ -37,7 +38,7 @@ export const store = configureStore({
     revenue: revenueReducer,
     activeUsers: activeUsersReducer,
     comments: commentsReducer,
-    orderDetail: orderDetailReducer,
+    order: orderReducer,
     userSettings: userSettingsReducer,
     wishlist: wishListReducer,
 
@@ -52,6 +53,7 @@ export const store = configureStore({
     roles: rolesReducer,
     activity: activityReducer,
     security: securityReducer,
+    adminOrders: adminOrderReducer,
     theme: themeReducer,
   },
 });

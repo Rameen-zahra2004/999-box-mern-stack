@@ -1,7 +1,4 @@
-import {
-  ROLE_HIERARCHY,
-} from "./role.constants.js";
-
+import { ROLE_HIERARCHY } from "./role.constants.js";
 
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -27,8 +27,22 @@ const AdminLogin = () => {
     }
   };
 
+  // FIX: previously this was:
+  //   if (isAuthenticated) { navigate("/admin/dashboard"); return null; }
+  // ...called directly in the component body, which runs during render.
+  // navigate() triggers a state update on BrowserRouter, and React does
+  // not allow updating one component's state while a different component
+  // (AdminLogin) is still rendering — that's exactly the console error:
+  // "Cannot update a component (BrowserRouter) while rendering a
+  // different component (AdminLogin)". Moving it into useEffect makes the
+  // navigation a proper side effect that runs after render completes.
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/admin/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
   if (isAuthenticated) {
-    navigate("/admin/dashboard");
     return null;
   }
 

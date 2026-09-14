@@ -1,18 +1,20 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api";
 
-const API = "/admins/roles"; // ✅ FIXED: was "/admin/roles"
+const API = "/admins/roles";
 
 export const fetchRoles = createAsyncThunk(
   "roles/fetchRoles",
   async (_, { rejectWithValue }) => {
     try {
       const res = await api.get(API);
-      return res.data;
+      return res.data.data; // FIX: backend wraps as { success, message, data } — was returning the whole wrapper, not the array
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to fetch roles");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch roles",
+      );
     }
-  }
+  },
 );
 
 export const addRole = createAsyncThunk(
@@ -20,11 +22,13 @@ export const addRole = createAsyncThunk(
   async (role, { rejectWithValue }) => {
     try {
       const res = await api.post(API, role);
-      return res.data;
+      return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to add role");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to add role",
+      );
     }
-  }
+  },
 );
 
 export const deleteRole = createAsyncThunk(
@@ -34,12 +38,13 @@ export const deleteRole = createAsyncThunk(
       await api.delete(`${API}/${id}`);
       return id;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to delete role");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to delete role",
+      );
     }
-  }
+  },
 );
 
-// Alias so components using removeRole still work
 export const removeRole = deleteRole;
 
 const rolesSlice = createSlice({
@@ -96,7 +101,7 @@ const rolesSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.roles = state.roles.filter(
-          (r) => r._id !== action.payload && r.id !== action.payload
+          (r) => r._id !== action.payload && r.id !== action.payload,
         );
       })
       .addCase(deleteRole.rejected, (state, action) => {

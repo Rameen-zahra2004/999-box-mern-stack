@@ -1,7 +1,8 @@
 import express from "express";
 
-import { protect } from "../auth/auth.middleware.js"; // adjust path if needed
-import upload, { uploadErrorHandler } from "../../middleware/upload.js"; // adjust path to your actual upload.js location
+import { protectAdmin } from "../admin/admin.middleware.js";
+import authorizeRoles from "../roles/role.middleware.js";
+import upload, { uploadErrorHandler } from "../../middleware/upload.js"; // adjust path if needed
 
 import {
   createProductController,
@@ -19,17 +20,36 @@ import {
 
 const router = express.Router();
 
-
+// Public — browsing products requires no auth, correctly left as-is.
 router.get("/", getProductsController);
-
 router.get("/:id", getProductController);
 
+// FIX: every write route below previously used `protect` alone with NO role
+// check at all — any logged-in customer account could create, edit, or
+// delete products, or manage product images, directly via the API. Swapped
+// to protectAdmin (protect never recognizes Admin sessions anyway) and
+// added authorizeRoles to actually gate these by role.
 
-router.post("/", protect, createProductController);
+router.post(
+  "/",
+  protectAdmin,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  createProductController,
+);
 
-router.put("/:id", protect, updateProductController);
+router.put(
+  "/:id",
+  protectAdmin,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  updateProductController,
+);
 
-router.delete("/:id", protect, deleteProductController);
+router.delete(
+  "/:id",
+  protectAdmin,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  deleteProductController,
+);
 
 // Helper to wrap multer so its errors are catchable
 const runMulter = (req, res, next) => {
@@ -39,15 +59,26 @@ const runMulter = (req, res, next) => {
   });
 };
 
-// Replace the old route:
 router.post(
   "/:id/images",
-  protect,
-  runMulter, // ← replaces upload.array + uploadErrorHandler
+  protectAdmin,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  runMulter,
   uploadProductImagesController,
 );
-router.delete("/:id/images/:imageId", protect, deleteProductImageController);
 
-router.patch("/:id/images/reorder", protect, reorderProductImagesController);
+router.delete(
+  "/:id/images/:imageId",
+  protectAdmin,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  deleteProductImageController,
+);
+
+router.patch(
+  "/:id/images/reorder",
+  protectAdmin,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  reorderProductImagesController,
+);
 
 export default router;
