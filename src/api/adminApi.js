@@ -1,12 +1,12 @@
 import axios from "axios";
 
-// NOTE: deliberately NOT using VITE_API_URL here — that variable is shared
-// with the regular user-facing api.js and points to ".../api" (no /admins
-// suffix). Using it here would break admin requests. If you need this to
-// be configurable per-environment later, introduce a separate
-// VITE_ADMIN_API_URL variable instead of reusing VITE_API_URL.
+// Reuses VITE_API_URL (same var as src/api.js, which points to ".../api")
+// and appends the /admins suffix, so one env var configures every instance.
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 const adminApi = axios.create({
-  baseURL: "http://localhost:5000/api/admins",
+  baseURL: `${API_BASE_URL}/admins`,
   withCredentials: true,
 });
 
