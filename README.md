@@ -1,305 +1,224 @@
-# 🛒 MERN Stack Ecommerce Website
+# THE 999 BOX 🛍️
 
-[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/Rameen-zahra2004/MERN-Stack-Ecommerce-Website)
-[![MERN Stack](https://img.shields.io/badge/Stack-MERN-green)](https://www.mongodb.com/mern-stack)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+A full-stack MERN e-commerce platform with separate User and Admin authentication systems, a complete shopping and checkout flow, and a full-featured admin dashboard for managing products, orders, carts, users, and store settings.
 
-A full-featured Ecommerce web application built using the MERN Stack (MongoDB, Express.js, React.js, Node.js). This project includes user authentication, product management, shopping cart, order system, payment integration, admin dashboard, and responsive UI.
-
----
-
-# 🚀 Live Demo
-
-* Frontend: Coming Soon
-* Backend API: Coming Soon
+**Live demo:** _add your deployed URL here_
+**Repo:** [github.com/Rameen-zahra2004/999-box-mern-stack](https://github.com/Rameen-zahra2004/999-box-mern-stack)
 
 ---
 
-# 📌 Features
+## ✨ Features
 
-## 👤 User Features
+### Storefront (User side)
+- Browse products by category with search and filtering
+- Product detail pages with image galleries and stock status
+- Shopping cart with real-time quantity and total updates
+- Checkout with **Stripe** and **PayPal** integration
+- Order history and order detail views
+- Order cancellation for pending orders
+- Wishlist support
+- User account settings and profile management
 
-* User Registration & Login
-* JWT Authentication
-* Product Search & Filtering
-* Product Categories
-* Product Details Page
-* Add to Cart
-* Wishlist
-* Checkout System
-* Order Tracking
-* Payment Gateway Integration
-* User Profile Management
-* Responsive Design
+### Admin Dashboard
+- Dashboard overview with live metrics (users, orders, revenue, products)
+- Product management (create, update, delete, image upload/reorder)
+- Order management with status updates
+- Customer cart management (view, edit, clear any customer's cart)
+- User management with role-based access
+- Revenue analytics and reporting
+- Activity log for admin actions
+- Store-wide system settings
+- Role and permission management
+- Profile settings with password change and 2FA toggle
 
-## 🛠️ Admin Features
-
-* Admin Dashboard
-* Product CRUD Operations
-* Category Management
-* Order Management
-* User Management
-* Sales Analytics
-* Stock Management
-
----
-
-# 🧰 Tech Stack
-
-## Frontend
-
-* React.js
-* Redux Toolkit
-* React Router DOM
-* Axios
-* Tailwind CSS / Bootstrap
-* Vite
-
-## Backend
-
-* Node.js
-* Express.js
-* MongoDB
-* Mongoose
-* JWT Authentication
-* bcrypt.js
-* Multer
-* Cloudinary
+### Architecture highlights
+- **Dual authentication system**: completely separate `User` and `Admin` MongoDB collections, each with its own namespaced HTTP-only cookies (`accessToken`/`refreshToken` for users, `adminAccessToken`/`adminRefreshToken` for admins) — both sessions can coexist in the same browser without colliding
+- **Role-based access control** with `ADMIN` and `SUPER_ADMIN` tiers, enforced at the route layer on every admin-only endpoint
+- **Token rotation with reuse detection** — refresh tokens are hashed and rotated on every use; a mismatch triggers a forced logout as a theft-response signal
+- **Transactional order creation** — stock decrement, order creation, and cart clearing happen atomically via MongoDB sessions, so a failure partway through never leaves inconsistent data
+- **Centralized, consistent error handling** — every error is normalized to a proper HTTP status code and shape before reaching the client, with full request context logged server-side via Winston
 
 ---
 
-# 📂 Folder Structure
+## 🛠️ Tech Stack
 
-```bash
-EcommerceMERN/
-│
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   └── package.json
-│
+**Frontend**
+- React + Vite
+- Redux Toolkit
+- React Router
+- Tailwind CSS
+- Recharts (analytics charts)
+- Stripe.js / PayPal SDK
+
+**Backend**
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT authentication (access + refresh token pattern)
+- bcrypt password hashing
+- Joi request validation
+- Multer for image uploads
+- Winston for logging
+- Helmet, express-rate-limit, express-mongo-sanitize for security hardening
+
+**Payments**
+- Stripe
+- PayPal
+
+---
+
+## 📁 Project Structure
+
+```
 ├── backend/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   ├── config/
-│   ├── utils/
-│   └── server.js
+│   ├── modules/            # Feature modules (auth, admin, orders, cart, product, etc.)
+│   │   └── <feature>/
+│   │       ├── <feature>.routes.js
+│   │       ├── <feature>.controller.js
+│   │       ├── <feature>.service.js
+│   │       ├── <feature>.model.js
+│   │       └── <feature>.validation.js
+│   ├── middleware/          # Global error handling, rate limiting, uploads
+│   ├── config/               # DB connection, CORS, environment config
+│   ├── routes/                # Central route aggregator
+│   ├── app.js                  # Express app configuration
+│   └── server.js                # Entry point — DB connection + server lifecycle
 │
-└── README.md
+└── src/                       # Frontend (React)
+    ├── Admin/                  # Admin pages (Dashboard, Products, Orders, Users, Carts, Settings)
+    ├── Admin component/         # Shared admin UI components
+    ├── AdminSettinngComponent/   # Settings sub-panels (Profile, Security, Roles, System)
+    ├── AdminSlices/               # Admin-side Redux slices
+    ├── Component/                  # Shared components (Checkout, Header, Footer)
+    ├── Pages/                       # User-facing pages
+    ├── Slices/                       # User-side Redux slices
+    └── Store/                         # Redux store configuration
 ```
 
 ---
 
-# ⚙️ Installation Guide
+## 🚀 Getting Started
 
-## 1️⃣ Clone Repository
+### Prerequisites
+- Node.js (v18+)
+- MongoDB Atlas account (or local MongoDB instance)
+- Stripe and/or PayPal developer accounts (for payment testing)
 
-```bash
-git clone https://github.com/Rameen-zahra2004/MERN-Stack-Ecommerce-Website.git
-cd MERN-Stack-Ecommerce-Website
-```
+### Installation
 
----
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Rameen-zahra2004/999-box-mern-stack.git
+   cd 999-box-mern-stack
+   ```
 
-## 2️⃣ Install Dependencies
+2. **Backend setup**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-### Backend
+   Create a `.env` file in `backend/` with the following variables:
+   ```env
+   NODE_ENV=development
+   PORT=5000
+   CLIENT_URL=http://localhost:5173
 
-```bash
-cd backend
-npm install
-```
+   MONGO_URI=your_mongodb_connection_string
 
-### Frontend
+   JWT_ACCESS_SECRET=your_access_secret
+   JWT_REFRESH_SECRET=your_refresh_secret
+   JWT_ACCESS_EXPIRES_IN=15m
+   JWT_REFRESH_EXPIRES_IN=7d
 
-```bash
-cd frontend
-npm install
-```
+   STRIPE_SECRET_KEY=your_stripe_secret_key
+   STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+   PAYPAL_CLIENT_ID=your_paypal_client_id
+   PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 
----
+   SMTP_HOST=your_smtp_host
+   SMTP_PORT=587
+   SMTP_USER=your_smtp_user
+   SMTP_PASS=your_smtp_password
+   ```
 
-# 🔑 Environment Variables
+   Start the backend:
+   ```bash
+   npm run dev
+   ```
 
-Create a `.env` file inside the backend folder.
+3. **Frontend setup**
+   ```bash
+   cd ..
+   npm install
+   ```
 
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection
-JWT_SECRET=your_secret_key
-NODE_ENV=development
+   Create a `.env` file in the project root:
+   ```env
+   VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+   ```
 
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+   Start the frontend:
+   ```bash
+   npm run dev
+   ```
 
-STRIPE_SECRET_KEY=your_stripe_secret
-```
+4. **Create your first Super Admin**
 
----
+   Use the included bootstrap script (run once, on an empty Admin collection):
+   ```bash
+   cd backend
+   node scripts/createSuperAdmin.js
+   ```
 
-# ▶️ Run Project
-
-## Backend
-
-```bash
-cd backend
-npm run dev
-```
-
-## Frontend
-
-```bash
-cd frontend
-npm run dev
-```
-
----
-
-# 🔐 Admin Access
-
-You can manually create an admin in MongoDB.
-
-Example Admin Document:
-
-```json
-{
-  "name": "Admin",
-  "email": "admin@gmail.com",
-  "password": "hashedpassword",
-  "role": "admin"
-}
-```
+The app will be running at `http://localhost:5173` (storefront) and the admin panel at `http://localhost:5173/admin/login`.
 
 ---
 
-# 📸 Screenshots
+## 🔐 Security Notes
 
-## 🏠 Home Page
-
-![Home Page](./novamart.jpeg)
-
----
-
-## 🛍️ Product Page
-
-![Product Page](./novamart3.jpeg)
+- All admin routes are protected by role-aware middleware (`protectAdmin` + `authorizeRoles`) — verified end-to-end across every admin module
+- Passwords are hashed with bcrypt; refresh tokens are hashed before storage and never stored in plaintext
+- Rate limiting is applied globally and more strictly on auth endpoints
+- MongoDB queries are sanitized against NoSQL injection
+- Sensitive routes require re-authentication; account lockout is enforced after repeated failed login attempts
 
 ---
 
-## 🛒 Cart Page
+## 📌 Known Limitations
 
-![Cart Page](./novamart4.jpeg)
-
----
-
-## 👤 Sign In Page
-
-![Sign In](./signin.jpeg)
+A few admin features currently have frontend UI without full backend support yet — flagged transparently rather than hidden:
+- **Role management** (add/remove custom roles) — read-only for now
+- **Security panel** (rate-limit/IP-block visibility) — backend routes not yet built
+- **Data export / account deletion** — UI present, backend endpoints pending
 
 ---
 
-## ⚙️ Admin Dashboard
+## 🗺️ Roadmap
 
-![Admin Dashboard](./admin dashboard.jpeg)
-# 📦 API Endpoints
-
-## Auth Routes
-
-```bash
-POST   /api/auth/register
-POST   /api/auth/login
-GET    /api/auth/profile
-```
-
-## Product Routes
-
-```bash
-GET    /api/products
-GET    /api/products/:id
-POST   /api/products
-PUT    /api/products/:id
-DELETE /api/products/:id
-```
-
-## Order Routes
-
-```bash
-POST   /api/orders
-GET    /api/orders/myorders
-GET    /api/orders/:id
-```
+- [ ] Full role management CRUD
+- [ ] Security dashboard backed by real rate-limit/IP-block data
+- [ ] Data export (JSON/CSV) and account deletion flows
+- [ ] Automated test coverage (Jest / Supertest)
+- [ ] CI/CD pipeline
 
 ---
 
-# 🧪 Available Scripts
-
-## Frontend
-
-```bash
-npm run dev
-npm run build
-npm run preview
-```
-
-## Backend
-
-```bash
-npm run dev
-npm start
-```
-
----
-
-# 🌐 Deployment
-
-## Frontend Deployment
-
-* Vercel
-* Netlify
-
-## Backend Deployment
-
-* Render
-* Railway
-* Cyclic
-
-## Database
-
-* MongoDB Atlas
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome.
-
-1. Fork the repository
-2. Create a new branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
----
-
-# 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-# 👩‍💻 Developer
+## 👤 Author
 
 **Rameen Zahra**
+Full Stack MERN Developer
 
-* Full Stack MERN Developer
-* GitHub: [https://github.com/Rameen-zahra2004](https://github.com/Rameen-zahra2004)
-* LinkedIn:[Rameen Zahra](https://www.linkedin.com/in/rameen-zahra-5a31a7381)
+- GitHub: [Rameen-zahra2004](https://github.com/Rameen-zahra2004)
+- LinkedIn: [Rameen Zahra](https://www.linkedin.com/in/rameen-zahra-5a31a7381)
 
 ---
 
-# ⭐ Support
+## 📄 License
+
+This project is available for portfolio and educational purposes. Contact the author for commercial use inquiries.
+
+---
+
+## ⭐ Support
 
 If you like this project, give it a ⭐ on GitHub.
