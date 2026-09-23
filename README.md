@@ -2,8 +2,32 @@
 
 A full-stack MERN e-commerce platform with separate User and Admin authentication systems, a complete shopping and checkout flow, and a full-featured admin dashboard for managing products, orders, carts, users, and store settings.
 
-**Live demo:** _add your deployed URL here_
+[![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=flat&logo=redux&logoColor=white)](https://redux-toolkit.js.org/)
+[![Stripe](https://img.shields.io/badge/Stripe-626CD9?style=flat&logo=stripe&logoColor=white)](https://stripe.com/)
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white)](https://www.paypal.com/)
+[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey)](./LICENSE)
+
+**Live demo:** [999-box-mern-stack.vercel.app](https://999-box-mern-stack.vercel.app)
 **Repo:** [github.com/Rameen-zahra2004/999-box-mern-stack](https://github.com/Rameen-zahra2004/999-box-mern-stack)
+
+---
+
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Screenshots](#-screenshots)
+- [Architecture Highlights](#architecture-highlights)
+- [Tech Stack](#️-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Security Notes](#-security-notes)
+- [Known Limitations](#-known-limitations)
+- [Roadmap](#️-roadmap)
+- [Author](#-author)
 
 ---
 
@@ -40,6 +64,46 @@ A full-stack MERN e-commerce platform with separate User and Admin authenticatio
 
 ---
 
+## 📸 Screenshots
+
+### Storefront
+
+| Homepage | Product Listing |
+|---|---|
+| ![Homepage](./01-homepage.png) | ![Products](./02-products.png) |
+
+| Product Detail | Shopping Cart |
+|---|---|
+| ![Product Detail](./03-product-detail.png) | ![Cart](./04-cart.png) |
+
+| Checkout | Login |
+|---|---|
+| ![Checkout](./05-checkout.png) | ![Login](./06-login.png) |
+
+**User Dashboard**
+
+![User Dashboard](./07-user-dashboard.png)
+
+### Admin Dashboard
+
+**Overview**
+
+![Admin Dashboard](./08-admin-dashboard.png)
+
+| Product Management | Order Management |
+|---|---|
+| ![Admin Products](./09-admin-products.png) | ![Admin Orders](./10-admin-orders.png) |
+
+| User Management | Customer Carts |
+|---|---|
+| ![Admin Users](./11-admin-users.png) | ![Admin Carts](./12-admin-carts.png) |
+
+**Admin Settings**
+
+![Admin Settings](./13-admin-settings.png)
+
+---
+
 ## 🛠️ Tech Stack
 
 **Frontend**
@@ -70,28 +134,28 @@ A full-stack MERN e-commerce platform with separate User and Admin authenticatio
 
 ```
 ├── backend/
-│   ├── modules/            # Feature modules (auth, admin, orders, cart, product, etc.)
+│   ├── modules/              # Feature modules (auth, admin, orders, cart, product, etc.)
 │   │   └── <feature>/
 │   │       ├── <feature>.routes.js
 │   │       ├── <feature>.controller.js
 │   │       ├── <feature>.service.js
 │   │       ├── <feature>.model.js
 │   │       └── <feature>.validation.js
-│   ├── middleware/          # Global error handling, rate limiting, uploads
-│   ├── config/               # DB connection, CORS, environment config
+│   ├── middleware/            # Global error handling, rate limiting, uploads
+│   ├── config/                # DB connection, CORS, environment config
 │   ├── routes/                # Central route aggregator
-│   ├── app.js                  # Express app configuration
-│   └── server.js                # Entry point — DB connection + server lifecycle
+│   ├── app.js                 # Express app configuration
+│   └── server.js               # Entry point — DB connection + server lifecycle
 │
-└── src/                       # Frontend (React)
+└── src/                        # Frontend (React)
     ├── Admin/                  # Admin pages (Dashboard, Products, Orders, Users, Carts, Settings)
-    ├── Admin component/         # Shared admin UI components
-    ├── AdminSettinngComponent/   # Settings sub-panels (Profile, Security, Roles, System)
-    ├── AdminSlices/               # Admin-side Redux slices
-    ├── Component/                  # Shared components (Checkout, Header, Footer)
-    ├── Pages/                       # User-facing pages
-    ├── Slices/                       # User-side Redux slices
-    └── Store/                         # Redux store configuration
+    ├── Admin component/        # Shared admin UI components
+    ├── AdminSettinngComponent/ # Settings sub-panels (Profile, Security, Roles, System)
+    ├── AdminSlices/             # Admin-side Redux slices
+    ├── Component/               # Shared components (Checkout, Header, Footer)
+    ├── Pages/                    # User-facing pages
+    ├── Slices/                    # User-side Redux slices
+    └── Store/                      # Redux store configuration
 ```
 
 ---
@@ -215,7 +279,7 @@ Full Stack MERN Developer
 
 ## 📄 License
 
-This project is available for portfolio and educational purposes. Contact the author for commercial use inquiries.
+**All Rights Reserved.** This code is publicly viewable for portfolio and educational purposes only — it is not licensed for reuse, redistribution, or modification. See [LICENSE](./LICENSE) for full terms. Contact the author for commercial use or collaboration inquiries.
 
 ---
 
